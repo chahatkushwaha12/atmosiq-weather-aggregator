@@ -6,6 +6,8 @@ import com.xtechwala.AtmosIQ.repository.WeatherCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -21,22 +23,23 @@ public class WeatherService {
     private final List<WeatherClient> weatherClients;
     private final WeatherCacheRepository weatherCacheRepository;
 
-    @Value("${scheduler.refresh-interval-ms:600000}")
+    @Value("${scheduler.refresh-interval-ms:60000}")
     private long refreshIntervalMs;
 
+    @Cacheable(value = "weather", key = "#city")
     public WeatherResponse getWeather(String city){
-        Optional<WeatherCache> cached = weatherCacheRepository
+        Optional<WeatherCache> latestWeatherInDB = weatherCacheRepository
                 .findTopByCityOrderByFetchedAtDesc(city);
 
-        if(cached.isPresent() && isFresh(cached.get())){
-            return toResponse(cached.get(), true);
+        if(latestWeatherInDB.isPresent() && isRefreshNotRequired(latestWeatherInDB.get())){
+            return toResponse(latestWeatherInDB.get());
         }
         return fetchFromProviders(city);
     }
 
-    private boolean isFresh(WeatherCache cache){
-        Duration age = Duration.between(cache.getFetchedAt(), LocalDateTime.now());
-        return age.toMillis() < refreshIntervalMs;
+    private boolean isRefreshNotRequired(WeatherCache cache){
+        Duration time = Duration.between(cache.getFetchedAt(), LocalDateTime.now());
+        return time.toMillis() < refreshIntervalMs;
     }
 
     private WeatherResponse fetchFromProviders(String city){
@@ -54,26 +57,6 @@ public class WeatherService {
         }
         return response;
     }
-
-    /*private void saveToDatabase(WeatherResponse response){
-        try{
-            WeatherCache savedCache = WeatherCache.builder()
-                    .city(response.getCity())
-                    .temperature(response.getTemperature())
-                    .humidity(response.getHumidity())
-                    .windSpeed(response.getWindSpeed())
-                    .description(response.getDescription())
-                    .source(response.getSource())
-                    .fetchedAt(LocalDateTime.now())
-                    .build();
-
-            weatherCacheRepository.save(savedCache);
-            log.info("Saved weather data for city='{}' from source='{}'",
-                    response.getCity(), response.getSource());
-        }catch(Exception ex){
-            log.error("Failed to save weather data to DB: {}", ex.getMessage());
-        }
-    }*/
 
     private void upsertToDatabase(WeatherResponse response) {
         try {
@@ -101,7 +84,7 @@ public class WeatherService {
         }
     }
 
-    private WeatherResponse toResponse(WeatherCache cache, boolean cached){
+    private WeatherResponse toResponse(WeatherCache cache){
         return WeatherResponse.builder()
                 .city(cache.getCity())
                 .temperature(cache.getTemperature())
@@ -110,7 +93,8 @@ public class WeatherService {
                 .description(cache.getDescription())
                 .source(cache.getSource())
                 .fetchedAt(cache.getFetchedAt())
-                .cached(cached)
+                .cached(true)
                 .build();
     }
+
 }
