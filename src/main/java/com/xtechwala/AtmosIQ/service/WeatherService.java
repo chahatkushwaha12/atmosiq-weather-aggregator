@@ -20,6 +20,8 @@ import java.util.Optional;
 @Slf4j
 public class WeatherService {
 
+    /*Spring automatically is list mein dono clients inject karta hai:
+    weatherClients = [OpenWeatherClient, WeatherApiClient]*/
     private final List<WeatherClient> weatherClients;
     private final WeatherCacheRepository weatherCacheRepository;
 
@@ -44,15 +46,18 @@ public class WeatherService {
 
     private WeatherResponse fetchFromProviders(String city){
         WeatherResponse response = null;
-        for(WeatherClient weatherClient : weatherClients) {
+        for(WeatherClient weatherClient : weatherClients) { // pehle OpenWeather try karo
             try {
                 response = weatherClient.fetchWeather(city);
-                if(response != null){
+                if(isValidResponse(response)){
                     upsertToDatabase(response);
+                    break;
+                }else{
+                    log.warn("[{}] Invalid data received, trying next provider...", weatherClient.getProviderName());
                 }
             } catch (Exception e) {
                 log.error("Provider {} failed for city {}: {}",
-                        weatherClient.getProviderName(), city, e.getStackTrace());
+                        weatherClient.getProviderName(), city, e.getStackTrace()); // fail hua toh next pe jao
             }
         }
         return response;
@@ -97,4 +102,32 @@ public class WeatherService {
                 .build();
     }
 
+    private boolean isValidResponse(WeatherResponse response){
+        return response != null
+                && response.getTemperature() >= -90 // world min temperature
+                && response.getTemperature() <= 60 // world max temperature
+                && response.getHumidity() >= 0
+                && response.getHumidity() <= 100
+                && response.getDescription() != null
+                && !response.getDescription().isBlank();
+    }
 }
+
+/*
+Request aai city="Delhi"
+        ↓
+Cache fresh hai?  →  YES  →  Cache se return karo
+        ↓ NO
+OpenWeatherClient.fetchWeather("Delhi")
+        ↓
+Success?  →  YES  →  DB save karo, return karo
+        ↓ NO (API down / wrong key)
+WeatherApiClient.fetchWeather("Delhi")
+        ↓
+Success?  →  YES  →  DB save karo, return karo
+        ↓ NO
+null return hoga
+
+Normal case → sirf OpenWeatherClient call hoga, WeatherApiClient call hi nahi hoga
+OpenWeather fail hua (API down, key expired, limit exceed) → tab automatically WeatherApiClient pe fallback ho jaega
+Ye failover/fallback pattern hai — dono ek saath call nhi hote */

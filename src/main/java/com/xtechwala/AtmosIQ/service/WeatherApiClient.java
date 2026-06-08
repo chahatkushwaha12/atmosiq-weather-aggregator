@@ -7,19 +7,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import tools.jackson.databind.JsonNode;
 
-@Slf4j
 @Service
-public class OpenWeatherClient implements WeatherClient{
+@Slf4j
+public class WeatherApiClient implements WeatherClient{
 
-    private static final String PROVIDER = "OpenWeatherMap";
+    private static final String PROVIDER = "WeatherApi";
 
     private final WebClient webClient;
     private final String apiKey;
     private final String baseUrl;
 
-    public OpenWeatherClient(WebClient webClient,
-                             @Value("${weather.openweathermap.api-key}") String apiKey,
-                             @Value("${weather.openweathermap.base-url}") String baseUrl){
+    public WeatherApiClient(WebClient webClient,
+                            @Value("${weather.weatherapi.api-key}") String apiKey,
+                            @Value("${weather.weatherapi.base-url}") String baseUrl){
         this.webClient = webClient;
         this.apiKey = apiKey;
         this.baseUrl = baseUrl;
@@ -30,12 +30,11 @@ public class OpenWeatherClient implements WeatherClient{
         log.info("[{}] Fetching weather for city='{}'", PROVIDER, city);
 
         try{
-
             JsonNode root = webClient.get()
                     .uri(baseUrl, builder -> builder
+                            .queryParam("key", apiKey)
                             .queryParam("q", city)
-                            .queryParam("appid", apiKey)
-                            .queryParam("units", "metric")
+                            .queryParam("api", "no")
                             .build())
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -45,26 +44,26 @@ public class OpenWeatherClient implements WeatherClient{
                 throw new RuntimeException("Empty response received");
             }
 
-            String description = root.path("weather")
-                    .get(0)
-                    .path("description")
+            JsonNode current = root.path("current");
+
+            String description = current
+                    .path("condition")
+                    .path("text")
                     .asText("N/A");
 
-            log.info("[{}] Successfully fetched for '{}'", PROVIDER, city);
+            log.info("[{}] Successfully fetched for '{}",PROVIDER, city);
 
             return WeatherResponse.builder()
                     .city(city)
-                    .temperature(root.path("main").path("temp").asDouble())
-                    .humidity(root.path("main").path("humidity").asInt())
-                    .windSpeed(root.path("wind").path("speed").asDouble())
+                    .temperature(current.path("temp_c").asDouble())
+                    .humidity(current.path("humidity").asInt())
+                    .windSpeed(current.path("wind_kph").asDouble())
                     .description(description)
                     .source(PROVIDER)
                     .cached(false)
                     .build();
         }catch(Exception ex){
-            log.error("[{}] API call failed for city='{}': {}",
-                    PROVIDER, city, ex.getMessage());
-
+            log.error("[{}] API failed for city='{}':{}",PROVIDER, city, ex.getMessage());
             throw new RuntimeException(PROVIDER, ex);
         }
     }
@@ -73,5 +72,4 @@ public class OpenWeatherClient implements WeatherClient{
     public String getProviderName() {
         return PROVIDER;
     }
-
 }
