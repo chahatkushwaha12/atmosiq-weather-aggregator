@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL) // Agar koi field null hai to JSON response me nhi acayegi
-@Schema(description = "Standard error response")
+@Schema(description = "Standard error response body")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ErrorResponse {
 
