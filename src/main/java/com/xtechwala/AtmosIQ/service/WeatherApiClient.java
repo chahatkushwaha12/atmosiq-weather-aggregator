@@ -3,6 +3,7 @@ package com.xtechwala.AtmosIQ.service;
 import com.xtechwala.AtmosIQ.dto.WeatherResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import tools.jackson.databind.JsonNode;

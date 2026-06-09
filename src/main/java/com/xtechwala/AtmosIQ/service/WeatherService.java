@@ -2,11 +2,12 @@ package com.xtechwala.AtmosIQ.service;
 
 import com.xtechwala.AtmosIQ.dto.WeatherResponse;
 import com.xtechwala.AtmosIQ.entity.WeatherCache;
+import com.xtechwala.AtmosIQ.exception.AllProvidorsDownException;
+import com.xtechwala.AtmosIQ.exception.DatabaseException;
 import com.xtechwala.AtmosIQ.repository.WeatherCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -57,8 +58,13 @@ public class WeatherService {
                 }
             } catch (Exception e) {
                 log.error("Provider {} failed for city {}: {}",
-                        weatherClient.getProviderName(), city, e.getStackTrace()); // fail hua toh next pe jao
+                        weatherClient.getProviderName(), city, e.getMessage()); // fail hua toh next pe jao
             }
+        }
+
+        // All providers failed or returned invalid data
+        if(response == null){
+            throw new AllProvidorsDownException();
         }
         return response;
     }
@@ -86,6 +92,7 @@ public class WeatherService {
             weatherCacheRepository.save(cache);
         } catch (Exception ex) {
             log.error("Failed to upsert weather data to DB: {}", ex.getMessage());
+            throw new DatabaseException("Failed to save weather data to database", ex);
         }
     }
 
