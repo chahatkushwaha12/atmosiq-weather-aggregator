@@ -1,7 +1,5 @@
 package com.xtechwala.AtmosIQ.schedular;
 
-import com.xtechwala.AtmosIQ.dto.WeatherResponse;
-import com.xtechwala.AtmosIQ.entity.WeatherCache;
 import com.xtechwala.AtmosIQ.repository.WeatherCacheRepository;
 import com.xtechwala.AtmosIQ.service.WeatherClient;
 import com.xtechwala.AtmosIQ.service.WeatherService;
@@ -11,9 +9,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
