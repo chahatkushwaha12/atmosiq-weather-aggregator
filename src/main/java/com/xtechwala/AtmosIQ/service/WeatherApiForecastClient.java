@@ -42,7 +42,7 @@ public class WeatherApiForecastClient implements ForecastClient {
                             .queryParam("key", apiKey)
                             .queryParam("q", city)
                             .queryParam("days", days)
-                            .queryParam("api", "no")
+                            .queryParam("aqi", "no")
                             .queryParam("alerts", "no")
                             .build())
                     .retrieve()
@@ -118,6 +118,6 @@ public class WeatherApiForecastClient implements ForecastClient {
 
     @Override
     public String getProviderName() {
-        return "";
+        return PROVIDER;
     }
 }

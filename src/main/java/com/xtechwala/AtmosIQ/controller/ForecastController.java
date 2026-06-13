@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/weather")
+@RequestMapping("/api/weather")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Weather", description = "Fetch real-time weather data for any city")
@@ -25,7 +25,7 @@ public class ForecastController {
 
     private final ForecastService forecastService;
 
-    @GetMapping
+    @GetMapping("/forecast")
     @Operation(
             summary = "Get 7-day weather forecast by city",
             description = "Returns a 7-day daily forecast including min/max/avg temperature, " +
